@@ -92,7 +92,7 @@ module Thingiverse
       end
     end
 
-    def upload_string(file_content, file_name)
+    def upload_from_string(file_content, file_name)
       #TODO: refactor the two variations of upload, instead of copy/paste
       response = Thingiverse::Connection.post("/things/#{id}/files", :body => {:filename => file_name}.to_json)
       raise "#{response.code}: #{JSON.parse(response.body)['error']} #{response.headers['x-error']}" unless response.success?
