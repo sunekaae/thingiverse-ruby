@@ -91,15 +91,36 @@ module Thingiverse
         send("#{name}=", value)
       end
     end
+    
+    def upload(file)
+      upload_from_file_or_string('file', file, nil, nil)
+    end
 
     def upload_from_string(file_content, file_name)
-      #TODO: refactor the two variations of upload, instead of copy/paste
+      upload_from_file_or_string('string', nil, file_content, file_name)
+    end
+
+    # bit hacky.
+    # file_or_string should be 'file' or 'string'
+    # if 'file' then pass along a file object in 'file'
+    # if 'string' then pass along the content to upload in 'file_content' and the intended file name in 'file_name'
+    # leave unused vars as nil
+    def upload_from_file_or_string(file_or_string, file, file_content, file_name)
+      raise "file_or_string option not recognized" if (!file_or_string == 'file' && !file_or_string == 'string')
+      
+      if file_or_string == 'file' then
+        file_name = file_name = File.basename(file.path)
+      end
+      
       response = Thingiverse::Connection.post("/things/#{id}/files", :body => {:filename => file_name}.to_json)
       raise "#{response.code}: #{JSON.parse(response.body)['error']} #{response.headers['x-error']}" unless response.success?
 
       parsed_response = JSON.parse(response.body)
       action = parsed_response["action"]
       query = parsed_response["fields"]
+      if file_or_string == 'file' then
+        query["file"] = file
+      end
 
       # stupid S3 requires params to be in a certain order... so can't use HTTParty :(
       # prepare post data
@@ -114,8 +135,11 @@ module Thingiverse
       post_data << Curl::PostField.content('Content-Type',            query['Content-Type'])
       post_data << Curl::PostField.content('Content-Disposition',     query['Content-Disposition'])
 
-# the following line is not the same between upload() and upload_from_string()
-      post_data << Curl::PostField.file('file', file_name) { file_content }
+      if file_or_string == 'file' then
+        post_data << Curl::PostField.file('file', file.path)
+      else
+        post_data << Curl::PostField.file('file', file_name) { file_content }
+      end
 
       # post
       c = Curl::Easy.new(action) do |curl|
@@ -136,54 +160,6 @@ module Thingiverse
       end
     end
 
-    def upload(file)
-# the following line is not the same between upload() and upload_from_string()
-      file_name = File.basename(file.path)
-      
-      response = Thingiverse::Connection.post("/things/#{id}/files", :body => {:filename => file_name}.to_json)
-      raise "#{response.code}: #{JSON.parse(response.body)['error']} #{response.headers['x-error']}" unless response.success?
-
-      parsed_response = JSON.parse(response.body)
-      action = parsed_response["action"]
-      query = parsed_response["fields"]
-
-# the following line is not the same between upload() and upload_from_string()
-      query["file"] = file
-
-      # stupid S3 requires params to be in a certain order... so can't use HTTParty :(
-      # prepare post data
-      post_data = []
-      # TODO: is query['bucket'] needed here?
-      post_data << Curl::PostField.content('key',                     query['key'])
-      post_data << Curl::PostField.content('AWSAccessKeyId',          query['AWSAccessKeyId'])
-      post_data << Curl::PostField.content('acl',                     query['acl'])
-      post_data << Curl::PostField.content('success_action_redirect', query['success_action_redirect'])
-      post_data << Curl::PostField.content('policy',                  query['policy'])
-      post_data << Curl::PostField.content('signature',               query['signature'])
-      post_data << Curl::PostField.content('Content-Type',            query['Content-Type'])
-      post_data << Curl::PostField.content('Content-Disposition',     query['Content-Disposition'])
-      
-# the following line is not the same between upload() and upload_from_string()
-      post_data << Curl::PostField.file('file', file.path)
-
-      # post
-      c = Curl::Easy.new(action) do |curl|
-        # curl.verbose = true
-        # can't follow redirect to finalize here because need to pass access_token for auth
-        curl.follow_location = false
-      end
-      c.multipart_form_post = true
-      c.http_post(post_data)
-
-      if c.response_code == 303
-        # finalize it
-        response = Thingiverse::Connection.post(query['success_action_redirect'])
-        raise "#{response.code}: #{JSON.parse(response.body)['error']} #{response.headers['x-error']}" unless response.success?
-        Thingiverse::Files.new(response.parsed_response)
-      else
-        raise "#{c.response_code}: #{c.body_str}"
-      end
-    end
 
     def publish
       if id.to_s == ""
