@@ -114,7 +114,7 @@ module Thingiverse
       post_data << Curl::PostField.content('Content-Type',            query['Content-Type'])
       post_data << Curl::PostField.content('Content-Disposition',     query['Content-Disposition'])
 
-
+# the following line is not the same between upload() and upload_from_string()
       post_data << Curl::PostField.file('file', file_name) { file_content }
 
       # post
@@ -137,12 +137,17 @@ module Thingiverse
     end
 
     def upload(file)
-      response = Thingiverse::Connection.post("/things/#{id}/files", :body => {:filename => File.basename(file.path)}.to_json)
+# the following line is not the same between upload() and upload_from_string()
+      file_name = File.basename(file.path)
+      
+      response = Thingiverse::Connection.post("/things/#{id}/files", :body => {:filename => file_name}.to_json)
       raise "#{response.code}: #{JSON.parse(response.body)['error']} #{response.headers['x-error']}" unless response.success?
 
       parsed_response = JSON.parse(response.body)
       action = parsed_response["action"]
       query = parsed_response["fields"]
+
+# the following line is not the same between upload() and upload_from_string()
       query["file"] = file
 
       # stupid S3 requires params to be in a certain order... so can't use HTTParty :(
@@ -157,7 +162,8 @@ module Thingiverse
       post_data << Curl::PostField.content('signature',               query['signature'])
       post_data << Curl::PostField.content('Content-Type',            query['Content-Type'])
       post_data << Curl::PostField.content('Content-Disposition',     query['Content-Disposition'])
-
+      
+# the following line is not the same between upload() and upload_from_string()
       post_data << Curl::PostField.file('file', file.path)
 
       # post
