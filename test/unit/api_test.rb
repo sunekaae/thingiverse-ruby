@@ -94,7 +94,7 @@ class APITest < Test::Unit::TestCase
     assert file.name == 'test.stl'
   end
   
-  def test_file_add_from_string
+  def test_file_upload_from_string
     thing = @thingiverse.things.create(:name => 'Create Test Thing With File From String', :license => 'cc-sa', :category => 'other', :description => 'foo bar', :is_wip => true)
     file_content = File.open(File.dirname(__FILE__) + '/../fixtures/test.stl', 'rb') { |f| f.read } # load content from file into string
     thingiverse_filename = "myfile.stl"
