@@ -85,13 +85,22 @@ class APITest < Test::Unit::TestCase
     assert date_after > date_before
   end
   
-  def test_file_upload_with_file_object
+  def test_file_upload_with_file_object_default_name
     thing = @thingiverse.things.create(:name => 'Create Test Thing With File', :license => 'cc-sa', :category => 'other', :description => 'foo bar', :is_wip => true)
     # thing = @thingiverse.things.find(29387)
     file = thing.upload(File.open(File.dirname(__FILE__) + '/../fixtures/test.stl'))
   
     # puts file.url
     assert file.name == 'test.stl'
+  end
+  
+  def test_file_upload_with_file_object_explicit_name
+    thing = @thingiverse.things.create(:name => 'Create Test Thing With File', :license => 'cc-sa', :category => 'other', :description => 'foo bar', :is_wip => true)
+    # thing = @thingiverse.things.find(29387)
+    file = thing.upload(File.open(File.dirname(__FILE__) + '/../fixtures/test.stl'), 'my.stl')
+  
+    # puts file.url
+    assert file.name == 'my.stl'
   end
   
   def test_file_upload_with_string_object

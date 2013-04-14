@@ -98,7 +98,7 @@ module Thingiverse
       raise ArgumentError, "file_or_string not of accepted type. Expected File or String. Actual: #{file_or_string.class}" unless ( file_or_string.is_a?(File) || file_or_string.is_a?(String) )
       raise ArgumentError, "when using a String as file_or_string, the thingiverse_filename is required." if file_or_string.is_a?(String) && thingiverse_filename.nil?
       
-      if file_or_string.is_a?(File) then
+      if file_or_string.is_a?(File) && thingiverse_filename.nil? then
         thingiverse_filename = File.basename(file_or_string.path)
       end
       
