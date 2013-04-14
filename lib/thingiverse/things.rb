@@ -92,28 +92,14 @@ module Thingiverse
       end
     end
     
-    # file should be a File object
-    # thingiverse_filename should be a String. It will be the name of the file on thingiverse. it is optional. if not passed the filename of the File object will be used
-    def upload(file, thingiverse_filename=nil)
-      thingiverse_filename = File.basename(file) if thingiverse_filename.nil?
-      upload_from_file_or_string(file, thingiverse_filename)
-    end
-
-    # content is String
-    # thingiverse_filename should be a String. it will be the name of the file on thingiverse
-    def upload_from_string(content, thingiverse_filename)
-      upload_from_file_or_string(content, thingiverse_filename)
-    end
-
-    # perhaps method should be marked private. clients should use 'upload' or 'upload_from_string'
-    # file_or_string should hold ref to either a file object, or a string.
-    # thingiverse_filename will be the name of the file on thingiverse.
-    def upload_from_file_or_string(file_or_string, thingiverse_filename)
-      raise ArgumentError, "file_or_string not of accepted type, actual: #{file_or_string.class}" unless ( file_or_string.is_a?(File) || file_or_string.is_a?(String) )
-      raise ArgumentError, "when using a String as thingiverse_filename, the thingiverse_filename is required." if file_or_string.is_a?(String) && thingiverse_filename.nil?
+    # file_or_string can be a File or a String.
+    # thingiverse_filename is optional if using a File (the File filename will be used by default) but is required if using a String
+    def upload(file_or_string, thingiverse_filename=nil)
+      raise ArgumentError, "file_or_string not of accepted type. Expected File or String. Actual: #{file_or_string.class}" unless ( file_or_string.is_a?(File) || file_or_string.is_a?(String) )
+      raise ArgumentError, "when using a String as file_or_string, the thingiverse_filename is required." if file_or_string.is_a?(String) && thingiverse_filename.nil?
       
       if file_or_string.is_a?(File) then
-        filename = File.basename(file_or_string.path)
+        thingiverse_filename = File.basename(file_or_string.path)
       end
       
       response = Thingiverse::Connection.post("/things/#{id}/files", :body => {:filename => thingiverse_filename}.to_json)
