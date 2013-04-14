@@ -104,6 +104,13 @@ class APITest < Test::Unit::TestCase
     assert file.name == 'myfile.stl'
   end
   
+  # a few test cases for bad param usage.
+  def test_file_upload_wrong_params
+    assert_raise ArgumentError do Thingiverse::Things.new.upload_from_file_or_string(nil, nil) end # nil as file
+    assert_raise ArgumentError do Thingiverse::Things.new.upload_from_file_or_string(4, nil) end # wrong type as file
+    assert_raise ArgumentError do Thingiverse::Things.new.upload_from_file_or_string("content", nil) end # no thingiverse filename for string file
+  end
+  
   def test_publish_new_thing
     thing = @thingiverse.things.new(:name => 'Create Test Thing', :license => 'cc-sa', :category => 'other', :description => 'foo bar', :is_wip => true)
     thing.save

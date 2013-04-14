@@ -92,34 +92,38 @@ module Thingiverse
       end
     end
     
-    def upload(file)
-      upload_from_file_or_string('file', file, nil, nil)
+    # file should be a File object
+    # thingiverse_filename should be a String. It will be the name of the file on thingiverse. it is optional. if not passed the filename of the File object will be used
+    def upload(file, thingiverse_filename=nil)
+      thingiverse_filename = File.basename(file) if thingiverse_filename.nil?
+      upload_from_file_or_string(file, thingiverse_filename)
     end
 
-    def upload_from_string(file_content, file_name)
-      upload_from_file_or_string('string', nil, file_content, file_name)
+    # content is String
+    # thingiverse_filename should be a String. it will be the name of the file on thingiverse
+    def upload_from_string(content, thingiverse_filename)
+      upload_from_file_or_string(content, thingiverse_filename)
     end
 
-    # bit hacky.
-    # file_or_string should be 'file' or 'string'
-    # if 'file' then pass along a file object in 'file'
-    # if 'string' then pass along the content to upload in 'file_content' and the intended file name in 'file_name'
-    # leave unused vars as nil
-    def upload_from_file_or_string(file_or_string, file, file_content, file_name)
-      raise "file_or_string option not recognized" if (!file_or_string == 'file' && !file_or_string == 'string')
+    # perhaps method should be marked private. clients should use 'upload' or 'upload_from_string'
+    # file_or_string should hold ref to either a file object, or a string.
+    # thingiverse_filename will be the name of the file on thingiverse.
+    def upload_from_file_or_string(file_or_string, thingiverse_filename)
+      raise ArgumentError, "file_or_string not of accepted type, actual: #{file_or_string.class}" unless ( file_or_string.is_a?(File) || file_or_string.is_a?(String) )
+      raise ArgumentError, "when using a String as thingiverse_filename, the thingiverse_filename is required." if file_or_string.is_a?(String) && thingiverse_filename.nil?
       
-      if file_or_string == 'file' then
-        file_name = file_name = File.basename(file.path)
+      if file_or_string.is_a?(File) then
+        filename = File.basename(file_or_string.path)
       end
       
-      response = Thingiverse::Connection.post("/things/#{id}/files", :body => {:filename => file_name}.to_json)
+      response = Thingiverse::Connection.post("/things/#{id}/files", :body => {:filename => thingiverse_filename}.to_json)
       raise "#{response.code}: #{JSON.parse(response.body)['error']} #{response.headers['x-error']}" unless response.success?
 
       parsed_response = JSON.parse(response.body)
       action = parsed_response["action"]
       query = parsed_response["fields"]
-      if file_or_string == 'file' then
-        query["file"] = file
+      if file_or_string.is_a?(File) then
+        query["file"] = file_or_string
       end
 
       # stupid S3 requires params to be in a certain order... so can't use HTTParty :(
@@ -135,10 +139,10 @@ module Thingiverse
       post_data << Curl::PostField.content('Content-Type',            query['Content-Type'])
       post_data << Curl::PostField.content('Content-Disposition',     query['Content-Disposition'])
 
-      if file_or_string == 'file' then
-        post_data << Curl::PostField.file('file', file.path)
+      if file_or_string.is_a?(File) then
+        post_data << Curl::PostField.file('file', file_or_string.path, thingiverse_filename)
       else
-        post_data << Curl::PostField.file('file', file_name) { file_content }
+        post_data << Curl::PostField.file('file', thingiverse_filename) { file_or_string }
       end
 
       # post
